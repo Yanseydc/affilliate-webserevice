@@ -11,13 +11,26 @@ builder.Services.AddSwaggerGen();
 // builder.Services.AddDbContext<AppDbContext>(options =>
 //     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+// var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+
+var pgHost = Environment.GetEnvironmentVariable("PGHOST");
+var pgPort = Environment.GetEnvironmentVariable("PGPORT");
+var pgDatabase = Environment.GetEnvironmentVariable("PGDATABASE");
+var pgUser = Environment.GetEnvironmentVariable("PGUSER");
+var pgPassword = Environment.GetEnvironmentVariable("PGPASSWORD");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    if (!string.IsNullOrWhiteSpace(databaseUrl))
+    if (!string.IsNullOrWhiteSpace(pgHost) &&
+        !string.IsNullOrWhiteSpace(pgPort) &&
+        !string.IsNullOrWhiteSpace(pgDatabase) &&
+        !string.IsNullOrWhiteSpace(pgUser) &&
+        !string.IsNullOrWhiteSpace(pgPassword))
     {
-        options.UseNpgsql(BuildConnectionStringFromDatabaseUrl(databaseUrl));
+        var connectionString =
+            $"Host={pgHost};Port={pgPort};Database={pgDatabase};Username={pgUser};Password={pgPassword};Pooling=true;SSL Mode=Disable";
+
+        options.UseNpgsql(connectionString);
     }
     else
     {
@@ -55,18 +68,18 @@ app.MapProductEndpoints();
 app.MapArticleEndpoints();
 app.MapClickEndpoints();
 
-try
-{
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-}
-catch (Exception ex)
-{
-    Console.WriteLine("Startup migration error:");
-    Console.WriteLine(ex.ToString());
-    throw;
-}
+// try
+// {
+//     using var scope = app.Services.CreateScope();
+//     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+//     db.Database.Migrate();
+// }
+// catch (Exception ex)
+// {
+//     Console.WriteLine("Startup migration error:");
+//     Console.WriteLine(ex.ToString());
+//     throw;
+// }
 
 app.Run();
 
