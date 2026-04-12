@@ -55,10 +55,17 @@ app.MapProductEndpoints();
 app.MapArticleEndpoints();
 app.MapClickEndpoints();
 
-using (var scope = app.Services.CreateScope())
+try
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+}
+catch (Exception ex)
+{
+    Console.WriteLine("Startup migration error:");
+    Console.WriteLine(ex.ToString());
+    throw;
 }
 
 app.Run();
@@ -68,16 +75,15 @@ static string BuildConnectionStringFromDatabaseUrl(string databaseUrl)
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':', 2);
 
-    var builder = new NpgsqlConnectionStringBuilder
+    var csb = new NpgsqlConnectionStringBuilder
     {
         Host = uri.Host,
         Port = uri.Port,
         Username = userInfo[0],
         Password = userInfo.Length > 1 ? userInfo[1] : "",
         Database = uri.AbsolutePath.Trim('/'),
-        SslMode = SslMode.Require,
-        TrustServerCertificate = true
+        Pooling = true
     };
 
-    return builder.ConnectionString;
+    return csb.ConnectionString;
 }
