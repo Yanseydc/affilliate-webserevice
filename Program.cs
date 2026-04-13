@@ -59,23 +59,22 @@ app.UseCors("Frontend");
 
 app.UseHttpsRedirection();
 
+try
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Database migration failed during startup.");
+    throw;
+}
+
 app.MapGet("/", () => Results.Ok(new { message = "AffiliateBackend running" }));
 app.MapProductEndpoints();
 app.MapArticleEndpoints();
 app.MapClickEndpoints();
-
-// try
-// {
-//     using var scope = app.Services.CreateScope();
-//     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-//     db.Database.Migrate();
-// }
-// catch (Exception ex)
-// {
-//     Console.WriteLine("Startup migration error:");
-//     Console.WriteLine(ex.ToString());
-//     throw;
-// }
 
 app.Run();
 
@@ -87,12 +86,16 @@ static string BuildConnectionStringFromDatabaseUrl(string databaseUrl)
     var csb = new NpgsqlConnectionStringBuilder
     {
         Host = uri.Host,
-        Port = uri.Port,
         Username = Uri.UnescapeDataString(userInfo[0]),
         Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "",
         Database = uri.AbsolutePath.Trim('/'),
         Pooling = true
     };
+
+    if (uri.Port > 0)
+    {
+        csb.Port = uri.Port;
+    }
 
     return csb.ConnectionString;
 }
